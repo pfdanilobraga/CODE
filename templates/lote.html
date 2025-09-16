@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOTE - Monitoramento</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; padding-top: 60px; }
+        .navbar { background-color: #1c3d5a; padding: 10px 20px; color: white; display: flex; justify-content: flex-start; align-items: center; position: fixed; top: 0; width: 100%; box-sizing: border-box; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .navbar-brand { font-size: 1.5em; font-weight: bold; margin-right: 30px; }
+        .navbar-link { color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background-color 0.3s; }
+        .navbar-link:hover { background-color: rgba(255, 255, 255, 0.1); }
+        .navbar-link.active { background-color: #007bff; }
+        .container { max-width: 1200px; margin: 2em auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #1c3d5a; border-bottom: 2px solid #e1e8ed; padding-bottom: 10px; }
+        .search-container { margin-bottom: 1em; }
+        .search-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; font-size: 14px; white-space: nowrap; }
+        th { background-color: #f5f7fa; color: #5a7184; text-transform: uppercase; font-size: 12px; }
+        tr:nth-child(even) { background-color: #fbfcfd; }
+        tr:hover { background-color: #eef4f9; }
+        .nav-link { display: inline-block; margin-bottom: 2em; font-weight: bold; color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Logística</div>
+        <a href="/" class="navbar-link">Importação (Lamonica)</a>
+        <a href="/etas" class="navbar-link">Controle (ETAS)</a>
+        <a href="/lote" class="navbar-link active">Monitoramento (LOTE)</a>
+    </nav>
+
+    <div class="container">
+        <h1>Monitoramento de Viagens em Trânsito (LOTE)</h1>
+        <div class="search-container"><input type="text" id="search-lote" class="search-input" placeholder="Buscar por Trip Number ou Lacre..."></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>LH (Trip Number)</th>
+                    <th>Lacre</th>
+                    <th>Status</th>
+                    <th>Previsão Chegada</th>
+                    <th>Km Faltante</th>
+                    <th>Posição</th>
+                </tr>
+            </thead>
+            <tbody id="lote-tabela-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const loteTbody = document.getElementById('lote-tabela-body');
+
+            // Função de filtro reutilizável
+            const setupSearchFilter = (inputId, tableBodyId) => {
+                const input = document.getElementById(inputId);
+                const tableBody = document.getElementById(tableBodyId);
+                if (input && tableBody) {
+                    input.addEventListener('input', () => {
+                        const filter = input.value.toLowerCase();
+                        const rows = tableBody.getElementsByTagName('tr');
+                        for (let i = 0; i < rows.length; i++) {
+                            const cells = rows[i].getElementsByTagName('td');
+                            let textContent = '';
+                            for (let j = 0; j < cells.length; j++) {
+                                textContent += cells[j].textContent || cells[j].innerText;
+                            }
+                            if (textContent.toLowerCase().indexOf(filter) > -1) {
+                                rows[i].style.display = '';
+                            } else {
+                                rows[i].style.display = 'none';
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Configura o filtro para a tabela LOTE
+            setupSearchFilter('search-lote', 'lote-tabela-body');
+
+            const carregarLote = async () => {
+                const response = await fetch('/api/lote');
+                const dados = await response.json();
+                loteTbody.innerHTML = '';
+                if (dados && dados.length > 0) {
+                    dados.forEach(viagem => {
+                        const tr = document.createElement('tr');
+                        const previsaoFormatada = viagem.previsao_chegada ? new Date(viagem.previsao_chegada).toLocaleString('pt-BR') : '---';
+                        tr.innerHTML = `
+                            <td>${viagem.trip_number}</td>
+                            <td>${viagem.lacre || '---'}</td>
+                            <td>${viagem.status || '---'}</td>
+                            <td>${previsaoFormatada}</td>
+                            <td>${viagem.distancia_faltante || '---'}</td>
+                            <td>${viagem.posicao || '---'}</td>
+                        `;
+                        loteTbody.appendChild(tr);
+                    });
+                } else {
+                    loteTbody.innerHTML = '<tr><td colspan="6">Nenhuma viagem em monitoramento.</td></tr>';
+                }
+            };
+
+            await carregarLote();
+        });
+    </script>
+</body>
+</html>

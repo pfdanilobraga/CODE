@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETAS - Controle de Viagens</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; padding-top: 60px; }
+        .navbar { background-color: #1c3d5a; padding: 10px 20px; color: white; display: flex; justify-content: flex-start; align-items: center; position: fixed; top: 0; width: 100%; box-sizing: border-box; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .navbar-brand { font-size: 1.5em; font-weight: bold; margin-right: 30px; }
+        .navbar-link { color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background-color 0.3s; }
+        .navbar-link:hover { background-color: rgba(255, 255, 255, 0.1); }
+        .navbar-link.active { background-color: #007bff; }
+        .container { max-width: 1200px; margin: 2em auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: #1c3d5a; border-bottom: 2px solid #e1e8ed; padding-bottom: 10px; }
+        .header-section { display: flex; justify-content: space-between; align-items: center; }
+        .header-section h1 { margin-bottom: 0; }
+        .btn-add { background-color: #28a745; margin-top: 10px; }
+        .search-container { margin-bottom: 1em; display: flex; gap: 10px; }
+        .search-input { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        .date-input { width: 150px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; font-size: 14px; white-space: nowrap; }
+        th { background-color: #f5f7fa; color: #5a7184; text-transform: uppercase; font-size: 12px; }
+        tr:nth-child(even) { background-color: #fbfcfd; }
+        tr:hover { background-color: #eef4f9; }
+        button { padding: 8px 12px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; }
+        .btn-editar { background-color: #17a2b8; }
+        .btn-salvar { background-color: #28a745; }
+        .btn-fechar { background-color: #6c757d; }
+        .btn-cpt { background-color: #ffc107; color: black; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal-body { padding-top: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .full-width { grid-column: span 3; }
+        label { margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #5a7184; }
+        input, select, textarea { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; width: 100%; box-sizing: border-box; }
+        input[readonly] { background-color: #e9ecef; }
+        textarea { resize: vertical; min-height: 80px; }
+        .modal-footer { border-top: 1px solid #eee; padding-top: 20px; text-align: right; margin-top: 20px; }
+        .modal-footer button { margin-left: 10px; }
+        .close-button { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Logística</div>
+        <a href="/" class="navbar-link">Importação (Lamonica)</a>
+        <a href="/etas" class="navbar-link active">Controle (ETAS)</a>
+        <a href="/lote" class="navbar-link">Monitoramento (LOTE)</a>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>Viagens em Controle (ETAS)</h1>
+            <button id="btn-add-viagem" class="btn-salvar btn-add">Adicionar Nova Viagem</button>
+        </div>
+        <div class="search-container">
+            <input type="text" id="search-etas" class="search-input" placeholder="Buscar por Trip Number ou Motorista...">
+            <label>De:</label>
+            <input type="date" id="date-from-etas" class="date-input">
+            <label>Até:</label>
+            <input type="date" id="date-to-etas" class="date-input">
+        </div>
+        <table>
+            <thead>
+                <tr><th>Trip Number</th><th>Status</th><th>Motorista</th><th>Placa</th><th>Origem</th><th>Destino</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="etas-tabela-body"></tbody>
+        </table>
+    </div>
+
+    <div id="etas-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Editar Viagem</h2>
+                <span class="close-button">&times;</span>
+            </div>
+            <form id="etas-form">
+                <input type="hidden" id="etas-trip_number">
+                <div class="modal-body">
+                    <div class="form-group"><label>Origem</label><input type="text" id="etas-origin" readonly></div>
+                    <div class="form-group"><label>Destino</label><input type="text" id="etas-destination" readonly></div>
+                    <div class="form-group"><label>Motorista Original</label><input type="text" id="etas-driver_name" readonly></div>
+                    <div class="form-group"><label for="etas-status_agrupado">Status</label><select id="etas-status_agrupado"><option value="ETA ORIGEM">ETA Origem</option><option value="CPT ORIGEM">CPT Origem</option><option value="EM TRÂNSITO">Em Trânsito</option><option value="PARADO">Parado</option><option value="PERNOITE">Pernoite</option><option value="ETA DESTINO">ETA Destino</option><option value="FINALIZADO">Finalizado</option></select></div>
+                    <div class="form-group"><label for="etas-motorista_substituto">Motorista Substituto</label><input type="text" id="etas-motorista_substituto" placeholder="Vazio se não houver"></div>
+                    <div class="form-group"><label for="etas-placa_substituta">Placa Substituta</label><input type="text" id="etas-placa_substituta" placeholder="Vazio se não houver"></div>
+                    <div class="form-group"><label>Data Prog. Carregamento</label><input type="datetime-local" id="etas-eta_scheduled_origin" readonly></div>
+                    <div class="form-group"><label>Data Prog. Destino</label><input type="datetime-local" id="etas-eta_destination" readonly></div>
+                    <div class="form-group"><label>Lacre</label><input type="text" id="etas-lacre" placeholder="Número do lacre"></div>
+                    <div class="form-group full-width"><label for="tipo_ocorrencia">Visualizar/Editar Ocorrência</label><select id="tipo_ocorrencia"><option value="">Selecione para ver/editar...</option><option value="ocorrencia_eta">Ocorrência na Chegada (Origem)</option><option value="ocorrencia_cpt">Ocorrência no Carregamento (CPT)</option><option value="ocorrencia_eta_destino">Ocorrência na Chegada (Destino)</option></select></div>
+                    <div class="form-group full-width"><label for="texto_ocorrencia">Descrição da Ocorrência Selecionada</label><textarea id="texto_ocorrencia" rows="3" placeholder="Selecione um tipo acima para ver a ocorrência atual e poder editá-la."></textarea></div>
+                    <div class="form-group full-width"><label for="etas-observacoes">Observações Gerais</label><textarea id="etas-observacoes" rows="3" placeholder="Observações gerais da viagem"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-fechar">Cancelar</button>
+                    <button type="submit" class="btn-salvar">Salvar Alterações</button>
+                    <button type="button" class="btn-cpt" id="btn-confirmar-cpt">Confirmar CPT ORIGEM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="add-viagem-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="add-modal-title">Adicionar Nova Viagem</h2>
+                <span class="close-button" id="close-add-modal">&times;</span>
+            </div>
+            <form id="add-viagem-form">
+                <div class="modal-body">
+                    <div class="form-group"><label for="add-trip-number">Trip Number</label><input type="text" id="add-trip-number" required></div>
+                    <div class="form-group"><label for="add-origin">Origem</label><input type="text" id="add-origin" required></div>
+                    <div class="form-group"><label for="add-destination">Destino</label><input type="text" id="add-destination" required></div>
+                    <div class="form-group"><label for="add-driver-name">Nome do Motorista</label><input type="text" id="add-driver-name" required></div>
+                    <div class="form-group"><label for="add-vehicle-number">Placa do Veículo</label><input type="text" id="add-vehicle-number" required></div>
+                    <div class="form-group"><label for="add-eta-scheduled-origin">Data Prog. Carregamento</label><input type="datetime-local" id="add-eta-scheduled-origin"></div>
+                    <div class="form-group"><label for="add-eta-destination">Data Prog. Destino</label><input type="datetime-local" id="add-eta-destination"></div>
+                    <div class="form-group full-width"><label for="add-observacoes">Observações</label><textarea id="add-observacoes" rows="3"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-fechar" id="cancel-add-modal">Cancelar</button>
+                    <button type="submit" class="btn-salvar">Criar Viagem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const etasTbody = document.getElementById('etas-tabela-body');
+            const editModal = document.getElementById('etas-modal');
+            const addModal = document.getElementById('add-viagem-modal');
+            const editForm = document.getElementById('etas-form');
+            const addForm = document.getElementById('add-viagem-form');
+
+            const filterTable = (tableId, filterValue, dateFromValue, dateToValue) => {
+                const rows = document.getElementById(tableId).getElementsByTagName('tr');
+                const filter = filterValue.toLowerCase();
+                const dateFrom = dateFromValue ? new Date(dateFromValue + 'T00:00:00') : null;
+                const dateTo = dateToValue ? new Date(dateToValue + 'T23:59:59') : null;
+
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].getElementsByTagName('td');
+                    if (cells.length === 0) continue;
+
+                    const tripNumber = cells[0].textContent;
+                    const driverName = cells[2].textContent;
+                    const etaOriginCell = cells[6];
+                    const etaOriginDate = etaOriginCell ? new Date(etaOriginCell.textContent) : null;
+
+                    const textMatch = (tripNumber.toLowerCase().indexOf(filter) > -1) || (driverName.toLowerCase().indexOf(filter) > -1);
+                    const dateMatch = (!dateFrom || (etaOriginDate && etaOriginDate >= dateFrom)) && (!dateTo || (etaOriginDate && etaOriginDate <= dateTo));
+
+                    if (textMatch && dateMatch) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            };
+
+            document.getElementById('search-etas').addEventListener('input', () => filterTable('etas-tabela-body', document.getElementById('search-etas').value, document.getElementById('date-from-etas').value, document.getElementById('date-to-etas').value));
+            document.getElementById('date-from-etas').addEventListener('change', () => filterTable('etas-tabela-body', document.getElementById('search-etas').value, document.getElementById('date-from-etas').value, document.getElementById('date-to-etas').value));
+            document.getElementById('date-to-etas').addEventListener('change', () => filterTable('etas-tabela-body', document.getElementById('search-etas').value, document.getElementById('date-from-etas').value, document.getElementById('date-to-etas').value));
+
+            const fecharModal = (modalToClose) => { modalToClose.style.display = 'none'; };
+
+            const carregarEtasCompleto = async () => {
+                const response = await fetch('/api/etas');
+                const dados = await response.json();
+                etasTbody.innerHTML = '';
+                if (dados && dados.length > 0) {
+                    dados.forEach(viagem => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${viagem.trip_number}</td><td>${viagem.status_agrupado || '---'}</td><td>${viagem.driver_name || '---'}</td><td>${viagem.vehicle_number || '---'}</td><td>${viagem.origin_station_code || '---'}</td><td>${viagem.destination_station_code || '---'}</td><td><button class="btn-editar" data-trip="${viagem.trip_number}">Detalhes/Editar</button></td>`;
+                        etasTbody.appendChild(tr);
+                    });
+                } else {
+                    etasTbody.innerHTML = '<tr><td colspan="7">Nenhuma viagem em controle.</td></tr>';
+                }
+            };
+            const abrirModalCompleto = async (tripNumber) => {
+                const response = await fetch(`/api/etas/${tripNumber}`);
+                viagemAtualNoModal = await response.json();
+                if (viagemAtualNoModal) {
+                    const formatarDataParaInput = (dataISO) => {
+                        if (!dataISO) return '';
+                        return dataISO.slice(0, 16);
+                    };
+                    document.getElementById('modal-title').textContent = `Editar Viagem: ${viagemAtualNoModal.trip_number}`;
+                    document.getElementById('etas-trip_number').value = viagemAtualNoModal.trip_number;
+                    document.getElementById('etas-origin').value = viagemAtualNoModal.origin_station_code || '';
+                    document.getElementById('etas-destination').value = viagemAtualNoModal.destination_station_code || '';
+                    document.getElementById('etas-driver_name').value = viagemAtualNoModal.driver_name || '';
+                    document.getElementById('etas-status_agrupado').value = viagemAtualNoModal.status_agrupado || 'ETA ORIGEM';
+                    document.getElementById('etas-observacoes').value = viagemAtualNoModal.observacoes || '';
+                    document.getElementById('etas-motorista_substituto').value = viagemAtualNoModal.motorista_substituto || '';
+                    document.getElementById('etas-placa_substituta').value = viagemAtualNoModal.placa_substituta || '';
+                    document.getElementById('etas-lacre').value = viagemAtualNoModal.lacre || '';
+                    document.getElementById('etas-eta_scheduled_origin').value = formatarDataParaInput(viagemAtualNoModal.eta_scheduled_origin_edited);
+                    document.getElementById('etas-eta_destination').value = formatarDataParaInput(viagemAtualNoModal.eta_destination_edited);
+                    document.getElementById('tipo_ocorrencia').value = '';
+                    document.getElementById('texto_ocorrencia').value = '';
+                    document.getElementById('texto_ocorrencia').placeholder = 'Selecione um tipo acima para ver a ocorrência atual e poder editá-la.';
+                    editModal.style.display = 'block';
+                }
+            };
+
+            etasTbody.addEventListener('click', e => { if (e.target.classList.contains('btn-editar')) { abrirModalCompleto(e.target.dataset.trip); } });
+            editModal.querySelector('.close-button').addEventListener('click', () => fecharModal(editModal));
+            editModal.querySelector('.btn-fechar').addEventListener('click', () => fecharModal(editModal));
+
+            document.getElementById('tipo_ocorrencia').addEventListener('change', (e) => {
+                const tipoSelecionado = e.target.value;
+                const campoTexto = document.getElementById('texto_ocorrencia');
+                if (tipoSelecionado && viagemAtualNoModal) {
+                    campoTexto.value = viagemAtualNoModal[tipoSelecionado] || '';
+                    campoTexto.placeholder = `Editando a ocorrência de ${tipoSelecionado}...`;
+                } else {
+                    campoTexto.value = '';
+                    campoTexto.placeholder = 'Selecione um tipo acima para ver a ocorrência atual e poder editá-la.';
+                }
+            });
+
+            editForm.addEventListener('submit', async e => {
+                e.preventDefault();
+                const tripNumber = document.getElementById('etas-trip_number').value;
+                const dadosParaAtualizar = { status_agrupado: document.getElementById('etas-status_agrupado').value, observacoes: document.getElementById('etas-observacoes').value, motorista_substituto: document.getElementById('etas-motorista_substituto').value, placa_substituta: document.getElementById('etas-placa_substituta').value };
+                const tipoOcorrencia = document.getElementById('tipo_ocorrencia').value;
+                const textoOcorrencia = document.getElementById('texto_ocorrencia').value;
+                if (tipoOcorrencia) { dadosParaAtualizar[tipoOcorrencia] = textoOcorrencia; }
+                const response = await fetch(`/api/etas/${tripNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosParaAtualizar) });
+                if (response.ok) { fecharModal(editModal); await carregarEtasCompleto(); } else { alert('Erro ao salvar alterações.'); }
+            });
+
+            document.getElementById('btn-confirmar-cpt').addEventListener('click', async () => {
+                const tripNumber = document.getElementById('etas-trip_number').value;
+                const lacre = document.getElementById('etas-lacre').value;
+                if (!tripNumber) return;
+
+                if (confirm(`Tem certeza que deseja confirmar o CPT Origem para a viagem ${tripNumber}? Esta ação irá movê-la para o painel de Monitoramento.`)) {
+                    const response = await fetch(`/api/viagens/${tripNumber}/confirmar-cpt`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lacre: lacre })
+                    });
+
+                    if (response.ok) {
+                        alert('CPT confirmado! A viagem está agora em monitoramento.');
+                        fecharModal(editModal);
+                        await carregarEtasCompleto();
+                    } else {
+                        alert('Erro ao confirmar CPT.');
+                    }
+                }
+            });
+
+            // Lógica para adicionar nova viagem
+            document.getElementById('btn-add-viagem').addEventListener('click', () => {
+                addModal.style.display = 'block';
+            });
+            document.getElementById('close-add-modal').addEventListener('click', () => fecharModal(addModal));
+            document.getElementById('cancel-add-modal').addEventListener('click', () => fecharModal(addModal));
+
+            addForm.addEventListener('submit', async e => {
+                e.preventDefault();
+                const dadosNovaViagem = {
+                    trip_number: document.getElementById('add-trip-number').value,
+                    origin_station_code: document.getElementById('add-origin').value,
+                    destination_station_code: document.getElementById('add-destination').value,
+                    driver_name: document.getElementById('add-driver-name').value,
+                    vehicle_number: document.getElementById('add-vehicle-number').value,
+                    eta_scheduled_origin_edited: document.getElementById('add-eta-scheduled-origin').value,
+                    eta_destination_edited: document.getElementById('add-eta-destination').value,
+                    observacoes: document.getElementById('add-observacoes').value
+                };
+
+                const response = await fetch('/api/nova-viagem', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(dadosNovaViagem)
+                });
+
+                if (response.ok) {
+                    const resultado = await response.json();
+                    alert(resultado.mensagem);
+                    fecharModal(addModal);
+                    await carregarEtasCompleto();
+                } else {
+                    const resultado = await response.json();
+                    alert(`Erro: ${resultado.erro}`);
+                }
+            });
+
+            carregarEtasCompleto();
+        });
+    </script>
+</body>
+</html>

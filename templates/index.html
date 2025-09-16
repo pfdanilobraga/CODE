@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Logística</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; padding-top: 60px; }
+        .navbar { background-color: #1c3d5a; padding: 10px 20px; color: white; display: flex; justify-content: flex-start; align-items: center; position: fixed; top: 0; width: 100%; box-sizing: border-box; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .navbar-brand { font-size: 1.5em; font-weight: bold; margin-right: 30px; }
+        .navbar-link { color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background-color 0.3s; }
+        .navbar-link:hover { background-color: rgba(255, 255, 255, 0.1); }
+        .navbar-link.active { background-color: #007bff; }
+        .container { max-width: 1200px; margin: 2em auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: #1c3d5a; border-bottom: 2px solid #e1e8ed; padding-bottom: 10px; }
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2em; }
+        .header-section h1 { margin-bottom: 0; }
+        .btn-import { background-color: #007bff; margin-top: 10px; }
+        .search-container { margin-bottom: 1em; display: flex; gap: 10px; }
+        .search-input { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        .date-input { width: 150px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; font-size: 14px; white-space: nowrap; }
+        th { background-color: #f5f7fa; color: #5a7184; text-transform: uppercase; font-size: 12px; }
+        tr:nth-child(even) { background-color: #fbfcfd; }
+        tr:hover { background-color: #eef4f9; }
+        button { padding: 8px 12px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; }
+        .btn-processar { background-color: #007bff; }
+        .btn-salvar { background-color: #28a745; }
+        .btn-fechar { background-color: #6c757d; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 700px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal-body { padding-top: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #5a7184; }
+        input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+        .modal-footer { border-top: 1px solid #eee; padding-top: 20px; text-align: right; margin-top: 20px; }
+        .close-button { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Logística</div>
+        <a href="/" class="navbar-link active">Importação (Lamonica)</a>
+        <a href="/etas" class="navbar-link">Controle (ETAS)</a>
+        <a href="/lote" class="navbar-link">Monitoramento (LOTE)</a>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>Monitoramento de Viagens - Importação</h1>
+            <button id="btn-importar" class="btn-processar btn-import">Importar</button>
+        </div>
+
+        <div id="lamonica-section">
+            <h2>Viagens para Processar (LAMONICA)</h2>
+            <div class="search-container">
+                <input type="text" id="search-lamonica" class="search-input" placeholder="Buscar por Trip Number ou Motorista...">
+                <label>De:</label>
+                <input type="date" id="date-from-lamonica" class="date-input">
+                <label>Até:</label>
+                <input type="date" id="date-to-lamonica" class="date-input">
+            </div>
+            <table>
+                <thead><tr><th>Trip Number</th><th>Driver Name</th><th>Status</th><th>ETA Origem</th><th>Ações</th></tr></thead>
+                <tbody id="lamonica-tabela-body"></tbody>
+            </table>
+        </div>
+
+        <div id="etas-section">
+            <h2>Viagens em Controle (ETAS)</h2>
+            <div class="search-container">
+                <input type="text" id="search-etas" class="search-input" placeholder="Buscar por Trip Number ou Motorista...">
+                <label>De:</label>
+                <input type="date" id="date-from-etas" class="date-input">
+                <label>Até:</label>
+                <input type="date" id="date-to-etas" class="date-input">
+            </div>
+            <table>
+                <thead><tr><th>Trip Number</th><th>Driver Name</th><th>Status</th><th>ETA Origem</th><th>ETA Origem (Realizado)</th></tr></thead>
+                <tbody id="etas-tabela-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Importar Arquivos</h2>
+                <span class="close-button" id="close-import-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <h3>LAMONICA (.xlsx)</h3>
+                    <form id="import-form-lamonica">
+                        <input type="file" id="arquivo-excel" accept=".xlsx" required>
+                        <button type="submit" class="btn-salvar">Importar</button>
+                    </form>
+                    <div id="mensagem-importacao-lamonica"></div>
+                </div>
+                <div class="form-group">
+                    <h3>Motoristas (.csv)</h3>
+                    <form id="import-form-motoristas">
+                        <input type="file" id="arquivo-csv" accept=".csv" required>
+                        <button type="submit" class="btn-salvar">Importar</button>
+                    </form>
+                    <div id="mensagem-importacao-motoristas"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Processar Viagem</h2>
+                <span class="close-button" id="close-edit-modal">&times;</span>
+            </div>
+            <form id="edit-form">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-trip_number">
+                    <div class="form-group"><label for="edit-origin_station_code">Origem</label><input type="text" id="edit-origin_station_code"></div>
+                    <div class="form-group"><label for="edit-destination_station_code">Destino</label><input type="text" id="edit-destination_station_code"></div>
+                    <div class="form-group"><label for="edit-driver_name">Nome do Motorista</label><input type="text" id="edit-driver_name"></div>
+                    <div class="form-group"><label for="edit-vehicle_number">Placa do Veículo</label><input type="text" id="edit-vehicle_number"></div>
+                    <div class="form-group"><label for="edit-eta_scheduled_origin_edited">Data Prog. Carregamento</label><input type="datetime-local" id="edit-eta_scheduled_origin_edited"></div>
+                    <div class="form-group"><label for="edit-eta_destination_edited">Data Prog. Destino</label><input type="datetime-local" id="edit-eta_destination_edited"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-fechar" id="cancel-edit-modal">Cancelar</button>
+                    <button type="submit" class="btn-salvar">Confirmar ETA ORIGEM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const lamonicaTbody = document.getElementById('lamonica-tabela-body');
+            const etasTbody = document.getElementById('etas-tabela-body');
+            const importModal = document.getElementById('import-modal');
+            const editModal = document.getElementById('edit-modal');
+            const editForm = document.getElementById('edit-form');
+            const importFormLamonica = document.getElementById('import-form-lamonica');
+            const importFormMotoristas = document.getElementById('import-form-motoristas');
+
+            const filterTable = (tableId, filterValue, dateFromValue, dateToValue) => {
+                const rows = document.getElementById(tableId).getElementsByTagName('tr');
+                const filter = filterValue.toLowerCase();
+                const dateFrom = dateFromValue ? new Date(dateFromValue + 'T00:00:00') : null;
+                const dateTo = dateToValue ? new Date(dateToValue + 'T23:59:59') : null;
+
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].getElementsByTagName('td');
+                    if (cells.length === 0) continue;
+
+                    const tripNumber = cells[0].textContent;
+                    const driverName = cells[1].textContent;
+                    const etaOriginCell = cells[3];
+                    const etaOriginDate = etaOriginCell ? new Date(etaOriginCell.textContent) : null;
+
+                    const textMatch = (tripNumber.toLowerCase().indexOf(filter) > -1) || (driverName.toLowerCase().indexOf(filter) > -1);
+                    const dateMatch = (!dateFrom || (etaOriginDate && etaOriginDate >= dateFrom)) && (!dateTo || (etaOriginDate && etaOriginDate <= dateTo));
+
+                    if (textMatch && dateMatch) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            };
+
+            document.getElementById('search-lamonica').addEventListener('input', () => filterTable('lamonica-tabela-body', document.getElementById('search-lamonica').value, document.getElementById('date-from-lamonica').value, document.getElementById('date-to-lamonica').value));
+            document.getElementById('date-from-lamonica').addEventListener('change', () => filterTable('lamonica-tabela-body', document.getElementById('search-lamonica').value, document.getElementById('date-from-lamonica').value, document.getElementById('date-to-lamonica').value));
+            document.getElementById('date-to-lamonica').addEventListener('change', () => filterTable('lamonica-tabela-body', document.getElementById('search-lamonica').value, document.getElementById('date-from-lamonica').value, document.getElementById('date-to-lamonica').value));
+
+            document.getElementById('search-etas').addEventListener('input', () => filterTable('etas-tabela-body', document.getElementById('search-etas').value, document.getElementById('date-from-etas').value, document.getElementById('date-to-etas').value));
+            document.getElementById('date-from-etas').addEventListener('change', () => filterTable('etas-tabela-body', document.getElementById('search-etas').value, document.getElementById('date-from-etas').value, document.getElementById('date-to-etas').value));
+            document.getElementById('date-to-etas').addEventListener('change', () => filterTable('etas-tabela-body', document.getElementById('search-etas').value, document.getElementById('date-from-etas').value, document.getElementById('date-to-etas').value));
+
+            const carregarLamonica = async () => {
+                const response = await fetch('/api/lamonica');
+                const dados = await response.json();
+                lamonicaTbody.innerHTML = '';
+                if (dados && dados.length > 0) {
+                    dados.forEach(viagem => {
+                        const tr = document.createElement('tr');
+                        const dataFormatada = viagem.eta_scheduled_origin_edited ? new Date(viagem.eta_scheduled_origin_edited).toLocaleString('pt-BR') : '---';
+                        tr.innerHTML = `
+                            <td>${viagem.trip_number}</td>
+                            <td>${viagem.driver_name || '---'}</td>
+                            <td>${viagem.status_agrupado || '---'}</td>
+                            <td>${dataFormatada}</td>
+                            <td><button class="btn-processar" data-trip="${viagem.trip_number}">Processar</button></td>
+                        `;
+                        lamonicaTbody.appendChild(tr);
+                    });
+                } else {
+                    lamonicaTbody.innerHTML = '<tr><td colspan="5">Nenhuma viagem para processar.</td></tr>';
+                }
+            };
+
+            const carregarEtas = async () => {
+                const response = await fetch('/api/etas');
+                const dados = await response.json();
+                etasTbody.innerHTML = '';
+                if (dados && dados.length > 0) {
+                    dados.forEach(viagem => {
+                        const tr = document.createElement('tr');
+                        const etaOrigem = viagem.eta_scheduled_origin_edited ? new Date(viagem.eta_scheduled_origin_edited).toLocaleString('pt-BR') : '---';
+                        const etaRealizado = viagem.eta_origin_realized ? new Date(viagem.eta_origin_realized).toLocaleString('pt-BR') : '---';
+                        tr.innerHTML = `
+                            <td>${viagem.trip_number}</td>
+                            <td>${viagem.driver_name || '---'}</td>
+                            <td>${viagem.status_agrupado || '---'}</td>
+                            <td>${etaOrigem}</td>
+                            <td>${etaRealizado}</td>
+                        `;
+                        etasTbody.appendChild(tr);
+                    });
+                } else {
+                    etasTbody.innerHTML = '<tr><td colspan="5">Nenhuma viagem em controle.</td></tr>';
+                }
+            };
+
+            const abrirModal = async (tripNumber) => {
+                const response = await fetch(`/api/lamonica/${tripNumber}`);
+                const viagem = await response.json();
+                if (viagem) {
+                    const formatarDataParaInput = (dataISO) => {
+                        if (!dataISO) return '';
+                        return dataISO.slice(0, 16);
+                    };
+                    document.getElementById('modal-title').textContent = `Processar Viagem: ${viagem.trip_number}`;
+                    document.getElementById('edit-trip_number').value = viagem.trip_number;
+                    document.getElementById('edit-origin_station_code').value = viagem.origin_station_code || '';
+                    document.getElementById('edit-destination_station_code').value = viagem.destination_station_code || '';
+                    document.getElementById('edit-driver_name').value = viagem.driver_name || '';
+                    document.getElementById('edit-vehicle_number').value = viagem.vehicle_number || '';
+                    document.getElementById('edit-eta_scheduled_origin_edited').value = formatarDataParaInput(viagem.eta_scheduled_origin_edited);
+                    document.getElementById('edit-eta_destination_edited').value = formatarDataParaInput(viagem.eta_destination_edited);
+                    editModal.style.display = 'block';
+                }
+            };
+
+            const fecharModal = (modalToClose) => { modalToClose.style.display = 'none'; };
+
+            // Listeners para abrir o modal de importação
+            document.getElementById('btn-importar').addEventListener('click', () => {
+                importModal.style.display = 'block';
+            });
+            document.getElementById('close-import-modal').addEventListener('click', () => fecharModal(importModal));
+
+            // Listener para abrir o modal de processamento
+            lamonicaTbody.addEventListener('click', e => {
+                if (e.target.classList.contains('btn-processar')) {
+                    const tripNumber = e.target.dataset.trip;
+                    abrirModal(tripNumber);
+                }
+            });
+
+            // Listeners para fechar o modal de processamento
+            document.getElementById('close-edit-modal').addEventListener('click', () => fecharModal(editModal));
+            document.getElementById('cancel-edit-modal').addEventListener('click', () => fecharModal(editModal));
+
+            // Listener para enviar o formulário do modal
+            editForm.addEventListener('submit', async e => {
+                e.preventDefault();
+                const tripNumber = document.getElementById('edit-trip_number').value;
+                const responseOriginal = await fetch(`/api/lamonica/${tripNumber}`);
+                const dadosViagem = await responseOriginal.json();
+
+                dadosViagem.origin_station_code = document.getElementById('edit-origin_station_code').value;
+                dadosViagem.destination_station_code = document.getElementById('edit-destination_station_code').value;
+                dadosViagem.driver_name = document.getElementById('edit-driver_name').value;
+                dadosViagem.vehicle_number = document.getElementById('edit-vehicle_number').value;
+                const etaOrigemValue = document.getElementById('edit-eta_scheduled_origin_edited').value;
+                dadosViagem.eta_scheduled_origin_edited = etaOrigemValue ? etaOrigemValue + ':00' : null;
+                const etaDestinoValue = document.getElementById('edit-eta_destination_edited').value;
+                dadosViagem.eta_destination_edited = etaDestinoValue ? etaDestinoValue + ':00' : null;
+
+                const response = await fetch('/api/promover-para-etas', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(dadosViagem)
+                });
+
+                if (response.ok) {
+                    fecharModal(editModal);
+                    await carregarLamonica();
+                    await carregarEtas();
+                } else {
+                    alert('Erro ao promover viagem.');
+                }
+            });
+
+            // Listeners dos formulários de importação
+            importFormLamonica.addEventListener('submit', async (e) => { e.preventDefault(); const mensagemDiv = document.getElementById('mensagem-importacao-lamonica'); mensagemDiv.textContent = 'Enviando arquivo, aguarde...'; const formData = new FormData(); formData.append('arquivo', document.getElementById('arquivo-excel').files[0]); try { const response = await fetch('/api/importar/lamonica', { method: 'POST', body: formData }); const resultado = await response.json(); if (!response.ok) throw new Error(resultado.erro); mensagemDiv.textContent = resultado.mensagem; mensagemDiv.style.color = 'green'; await carregarLamonica(); } catch (error) { mensagemDiv.textContent = `Erro: ${error.message}`; mensagemDiv.style.color = 'red'; } });
+            importFormMotoristas.addEventListener('submit', async (e) => { e.preventDefault(); const mensagemDiv = document.getElementById('mensagem-importacao-motoristas'); mensagemDiv.textContent = 'Enviando arquivo, aguarde...'; const formData = new FormData(); formData.append('arquivo', document.getElementById('arquivo-csv').files[0]); try { const response = await fetch('/api/importar/motoristas', { method: 'POST', body: formData }); const resultado = await response.json(); if (!response.ok) throw new Error(resultado.erro); mensagemDiv.textContent = resultado.mensagem; mensagemDiv.style.color = 'green'; await carregarLamonica(); } catch (error) { mensagemDiv.textContent = `Erro: ${error.message}`; mensagemDiv.style.color = 'red'; } });
+
+            // Carga inicial
+            carregarLamonica();
+            carregarEtas();
+        });
+    </script>
+</body>
+</html>
